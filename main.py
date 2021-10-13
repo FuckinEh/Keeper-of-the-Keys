@@ -1,29 +1,29 @@
 import time
 import random
 import pygame
+from Spritesheet import Spritesheet
+from Key import Key
 
 
-letters = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
-numbers = ['0','1','2','3','4','5','6','7','8','9']
+sprite_size = 25
+scale = 4
+width, height = 800,600
+spritesheet_bg_color = (127,127,127)
+
+keys = {}
+key_order = []
+
 
 
 def main():
-	#mode = getMode()
-	mode = 1
-
-	# get random character for player to guess
-	char = getChar(mode)
+	
+	mode = 2
+	char = get_char(mode)
 
 
-
-	# window width and height
-	width, height = 800,600
-
-	# initialize pygame
 	pygame.init()
 
-	# create screen object
-	# make screen object show up on computer screen
+	# open window initialize screen object
 	screen = pygame.display.set_mode((width,height))
 
 	# set caption and set background to white
@@ -31,31 +31,23 @@ def main():
 	screen.fill((255,255,255))
 
 
+	# initialize spritesheet object
+	spritesheet = Spritesheet("letters_spritesheet.png", ("graphics"), (sprite_size, sprite_size), spritesheet_bg_color)
+
+	# initialize array of all keys being used
+	init_keys(mode, spritesheet, sprite_size, scale, (0, 0, 700, 500))
 
 
-	# create a font object
-	# first parameter is the font file
-	# which is contained in pygame
-	# second parameter is the font size
-	font = pygame.font.SysFont('consolas', 96)
 
-	# create text surface object using font object
-	# first parameter is the text
-	# second parameter is antialias (True/False)
-	# third parameter is color
-	text = font.render(char.upper(), True, (0,0,0))
+	# combine all of the surface objects. This will need to happen every frame.
+	screen = blit_keys(screen)
 
-	# get text screen rectangle and center it
-	textRect = text.get_rect()
-	textRect.center = (width//2, height//2)
-
-	# combine text screen and new text rectangle object
-	screen.blit(text, textRect)
-
-	# update screen now with text on it
+	# update screen with the now-combined surface objects
 	pygame.display.update()
 
 
+
+	
 
 
 	running = True
@@ -72,16 +64,14 @@ def main():
 					running = False
 
 				if (event.key >= 97 and event.key <= 122) or (event.key >= 48 and event.key <= 57):
-					if chr(event.key) == char:
-
-						char = getChar(mode)
-						screen.fill((255,255,255))
-						text = font.render(char.upper(), True, (0,0,0))
-						screen.blit(text, textRect)
+					keys[ chr(event.key) ].press()
 
 
 
+		screen.fill((255,255,255))
+		screen = blit_keys(screen)
 		pygame.display.update()
+		
 
 				
 
@@ -92,26 +82,95 @@ def main():
 
 
 
+# scale is in the form (x1, y1, x2, y2)
+def init_keys(mode, spritesheet, sprite_size, scale, position_bounds):
+	if mode == 0: 
+		num = 10
+	elif mode == 1: 
+		num = 26
+	else: 
+		num = 36
 
-def getChar(mode):
+	list_of_available_chars = list(range(num))
+
+
+
+	for i in range(num):
+
+		if i < 26: 
+			c = chr(97 + i)				# Use letters for first 26 chars
+		else: 
+			c = chr(48 + i - 26)		# Use numbers for last 10 chars
+
+
+
+		x = random.randint(position_bounds[0], position_bounds[2])
+		y = random.randint(position_bounds[1], position_bounds[3])
+
+		rot = random.random() * 90
+		rot *= (-1) ** random.randint(1,2)
+		
+
+		keys[c] = Key(c, spritesheet, sprite_size, scale, (x,y), rot)
+
+
+
+
+
+		# This randomizes the order which I draw the letters on the screen
+		# I don't want them always drawn in alphabetical order
+		r_index = random.randint(0, len(list_of_available_chars)-1)
+
+		# Find the char that goes at this index (i) and update the list so it won't repeat
+		ordered_char = list_of_available_chars[ r_index ]
+		list_of_available_chars.pop(r_index)
+
+		if ordered_char < 26: 
+			c = chr(97 + ordered_char)				# Use letters for first 26 chars
+		else: 
+			c = chr(48 + ordered_char - 26)			# Use numbers for last 10 chars
+
+		key_order.append( c )			# This list is now a list of all the keys of the chars in a randomized order
+
+	
+
+
+
+
+def blit_keys(screen):
+	
+	for k in key_order:
+		sprite = keys[k].get_sprite()
+		screen.blit(sprite, keys[k].get_position())
+
+
+	return screen
+
+
+
+
+
+def get_char(mode):
 
 	if mode == 0:
 		i = random.randint(0,9)
-		return numbers[i]
+		return chr(48 + i)
+
 	elif mode == 1:
 		i = random.randint(0,25)
-		return letters[i]
+		return chr(97 + i)
+
 	elif mode == 2:
 		i = random.randint(0,35)
 		if i < 26:
-			return letters[i]
+			return chr(97 + i)
 		else:
-			return numbers[i-26]
+			return chr(48 + i - 26)
 
 
 
 
-def getMode():
+def get_mode():
 	mode = "0"		# 0 = number mode, 1 = alphabet mode, 2 = both
 
 	m = input("\nEnter the mode you would like to play,\n0 = number mode, 1 = alphabet mode, 2 = both\n")
